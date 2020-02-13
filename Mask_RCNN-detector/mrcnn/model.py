@@ -1853,7 +1853,7 @@ class MaskRCNN():
 
         # Inputs
         input_image = KL.Input(
-            shape=[512, 512, config.IMAGE_SHAPE[2]], name="input_image")
+            shape=[None, None, config.IMAGE_SHAPE[2]], name="input_image")
         input_image_meta = KL.Input(shape=[config.IMAGE_META_SIZE],
                                     name="input_image_meta")
         if mode == "training":
@@ -2019,10 +2019,14 @@ class MaskRCNN():
                 [target_mask, target_class_ids, mrcnn_mask])
 
             # Model
-            inputs = [input_image, input_gt_class_ids]
+            inputs = [input_image, input_image_meta,
+                      input_rpn_match, input_rpn_bbox, input_gt_class_ids, input_gt_boxes, input_gt_masks]
             if not config.USE_RPN_ROIS:
                 inputs.append(input_rois)
-            outputs = [C5]
+            outputs = [rpn_class_logits, rpn_class, rpn_bbox,
+                       mrcnn_class_logits, mrcnn_class, mrcnn_bbox, mrcnn_mask,
+                       rpn_rois, output_rois,
+                       rpn_class_loss, rpn_bbox_loss, class_loss, bbox_loss, mask_loss]
             model = KM.Model(inputs, outputs, name='mask_rcnn')
         else:
             # Network Heads
@@ -2046,10 +2050,10 @@ class MaskRCNN():
                                               config.MASK_POOL_SIZE,
                                               config.NUM_CLASSES,
                                               train_bn=config.TRAIN_BN)
-            flatten_layer = KL.Flatten()(C5)
-            final_layer = KL.Dense(6, activation='softmax', name='final_layer')(flatten_layer)
-            model = KM.Model([input_image],
-                             [final_layer],
+
+            model = KM.Model([input_image, input_image_meta, input_anchors],
+                             [detections, mrcnn_class, mrcnn_bbox,
+                                 mrcnn_mask, rpn_rois, rpn_class, rpn_bbox],
                              name='mask_rcnn')
 
         # Add multi-GPU support.
@@ -2184,6 +2188,7 @@ class MaskRCNN():
             loss=[None] * len(self.keras_model.outputs))
 
         # Add metrics for losses
+        self.keras_model.metrics_tensors = []
         for name in loss_names:
             if name in self.keras_model.metrics_names:
                 continue
