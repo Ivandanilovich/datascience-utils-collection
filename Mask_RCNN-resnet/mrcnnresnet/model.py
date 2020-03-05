@@ -23,7 +23,7 @@ import keras.layers as KL
 import keras.engine as KE
 import keras.models as KM
 
-from mrcnn import utils
+from mrcnnresnet import utils
 
 # Requires TensorFlow 1.3+ and Keras 2.0.8+.
 from distutils.version import LooseVersion
@@ -1829,7 +1829,7 @@ class MaskRCNN():
         config: A Sub-class of the Config class
         model_dir: Directory to save training logs and trained weights
         """
-        assert mode in ['training', 'inference']
+        # assert mode in ['training', 'inference']
         self.mode = mode
         self.config = config
         self.model_dir = model_dir
@@ -1842,7 +1842,7 @@ class MaskRCNN():
             mode: Either "training" or "inference". The inputs and
                 outputs of the model differ accordingly.
         """
-        assert mode in ['training', 'inference']
+        # assert mode in ['training', 'inference']
 
         # Image size must be dividable by 2 multiple times
         h, w = config.IMAGE_SHAPE[:2]
@@ -2046,8 +2046,10 @@ class MaskRCNN():
                                               config.MASK_POOL_SIZE,
                                               config.NUM_CLASSES,
                                               train_bn=config.TRAIN_BN)
+
             flatten_layer = KL.Flatten()(C5)
-            final_layer = KL.Dense(6, activation='softmax', name='final_layer')(flatten_layer)
+            final_layer = KL.Dense(6, activation='softmax', name='final_layer')(flatten_layer) # for using resnet only. hardcode. 
+
             model = KM.Model([input_image],
                              [final_layer],
                              name='mask_rcnn')
@@ -2303,7 +2305,7 @@ class MaskRCNN():
             augmentation. A source is string that identifies a dataset and is
             defined in the Dataset class.
         """
-        assert self.mode == "training", "Create model in training mode."
+        # assert self.mode == "training", "Create model in training mode."
 
         # Pre-defined layer regular expressions
         layer_regex = {
